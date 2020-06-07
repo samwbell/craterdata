@@ -633,7 +633,7 @@ def plot_pdf(T_pdf,P_pdf,ax='None',upshift=0,color='blue'):
 
 # A comprehensive function to plot the age.  The bin_width_exponent and num_bins_fitted parameters must be adjusted
 # by hand before running.  Plot the data first before running.
-def plot_age(ds, area, bin_width_exponent=0.5, num_bins_fitted=5, n_bins=400):
+def plot_age(ds, area, bin_width_exponent=0.5, num_bins_fitted=5, n_bins=400, age_dist_size=10000000):
     binned_data = calc_incremental_left(ds,area,n_points=100000,bin_width_exponent=bin_width_exponent)
     binned_data = binned_data.assign(n1_dist=((binned_data['ndist']/(binned_data['D'].\
             apply(lambda d: npf_new_incremental_left(d,bin_width_exponent=bin_width_exponent))))*npf_new(1)))
@@ -643,14 +643,17 @@ def plot_age(ds, area, bin_width_exponent=0.5, num_bins_fitted=5, n_bins=400):
     zero_dist=ig_ndist(0,n_points=10000)/area/npf_new(binned_data.iloc[-1]['D']*2**bin_width_exponent)*npf_new(1)
     X_pdf,zero_pdf=get_pdf(zero_dist,n_bins=n_bins,max_val=max_val)
     Y_combined_pdf = np.prod(density_pdf_list,axis=0)*zero_pdf
-    low,med,high=plot_pdf(ncf_inv(X_pdf),Y_combined_pdf)
+    n1_combined_dist=np.random.choice(X_pdf,p=Y_combined_pdf/sum(Y_combined_pdf),size=age_dist_size)
+    age_dist=ncf_inv(n1_combined_dist)
+    T_pdf,P_pdf=get_pdf(age_dist,max_val=ncf_inv(max(X_pdf)))
+    low,med,high=plot_pdf(T_pdf,P_pdf)
     plt.xlabel('age (Ga)',size=16)
     plt.yticks([])
-    val999 = np.percentile(Y_combined_pdf.cumsum(),99.9)
-    idx=np.argmin(abs(Y_combined_pdf.cumsum()-val999))
-    age_max = ncf_inv(X_pdf[idx])
+    val999 = np.percentile(P_pdf.cumsum(),99.9)
+    idx=np.argmin(abs(P_pdf.cumsum()-val999))
+    age_max = T_pdf[idx]
     plt.xlim([-0.01*age_max,age_max])
-    plt.text(0,0.7,r'$'+str(round(med,3))+'_{-'+str(round(med-low,3))+'}^{+'+str(round(high-med,3))+'}Ga$',size=30)
+    plt.text(0,0.75,r'$'+str(round(med,3))+'_{-'+str(round(med-low,3))+'}^{+'+str(round(high-med,3))+'}Ga$',size=25)
     return low,med,high
 
 
