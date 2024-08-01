@@ -117,18 +117,21 @@ def error_bar_linear(X_raw, P_raw, max_likelihood=None):
         y = norm.pdf(x, max_val, std)
         return y / y.max()
 
-    left_X = X[X < max_val]
-    left_P = (P / P.max())[X < max_val]
-    left_C = cumulative_trapezoid(left_P, left_X, initial=0)
-    
-    low_guess = np.interp(
-        2 - 2 * p_1_sigma, left_C, left_X
-    )
-    lower_guess = max_val - low_guess
-    
-    lower_result, cov = optimize.curve_fit(
-        fit_eq, left_X, left_P, p0=lower_guess
-    )
+    if max_val == 0:
+        lower_result = [None, None]
+    else:
+        left_X = X[X < max_val]
+        left_P = (P / P.max())[X < max_val]
+        left_C = cumulative_trapezoid(left_P, left_X, initial=0)
+        
+        low_guess = np.interp(
+            2 - 2 * p_1_sigma, left_C, left_X
+        )
+        lower_guess = max_val - low_guess
+        
+        lower_result, cov = optimize.curve_fit(
+            fit_eq, left_X, left_P, p0=lower_guess
+        )
 
     right_X = X[X > max_val]
     right_P = (P / P.max())[X > max_val]
@@ -163,7 +166,7 @@ def error_bar_log_N(N, n_points=10000, log_spacing=True):
 
 def error_bar_linear_N(N, n_points=10000, log_spacing=False):
 
-    if N > 0:
+    if N >= 0:
 
         X, P = true_error_pdf_XP(
             N, n_points=n_points, log_spacing=log_spacing
@@ -183,17 +186,34 @@ _lower_PPFit = read_PPFit('saved/lower_PPFit')
 _upper_PPFit = read_PPFit('saved/upper_PPFit')
 _lower_PPFit_linear = read_PPFit('saved/lower_PPFit_linear')
 _upper_PPFit_linear = read_PPFit('saved/upper_PPFit_linear')
+_val_PPFit_auto_log = read_PPFit('saved/val_PPFit_auto_log')
+_lower_PPFit_auto_log = read_PPFit('saved/lower_PPFit_auto_log')
+_upper_PPFit_auto_log = read_PPFit('saved/upper_PPFit_auto_log')
 
-
-_X0, _P0 = true_error_pdf_XP(0)
-_C0 = cumulative_trapezoid(_P0, _X0, initial=0)
-_C0 = _C0 / _C0.max()
-N_0_upper = np.interp(2 * p_1_sigma - 1, _C0, _X0)
-
+N_0_dict_df = pd.read_csv('saved/N_0_dict.csv', index_col=0)
+N_0_dict = {
+    col: tuple(N_0_dict_df[col]) for col in N_0_dict_df
+}
+def nan2None(n):
+    if np.isnan(n):
+        return None
+    else:
+        return n
+def None2nan(n):
+    if n is None:
+        return np.nan
+    else:
+        return n
+for k, v in N_0_dict.items():
+    N_0_dict[k] = tuple([nan2None(n) for n in N_0_dict[k]])
+N0_median, N0_median_lower, N0_median_upper = N_0_dict['median']
+N0_percentile_low = N0_median - N0_median_lower
+N0_percentile_high = N0_median + N0_median_upper
+N_0_upper = N_0_dict['log'][2]
 
 def get_error_bars(
     N_number_or_array, kind='log', log_space=False, 
-    multiplication_form=False
+    multiplication_form=False, return_val=False
 ):
 
     if type(N_number_or_array) in {float, int}:
@@ -204,8 +224,9 @@ def get_error_bars(
     N = full_N[nonzero]
         
     logN = np.log10(N)
-
-    if kind in {'log', 'Log'}:
+    
+    if kind.lower() == 'log':
+        val = N
         lower = 10**_lower_PPFit.apply(logN)
         upper = 10**_upper_PPFit.apply(logN)
         if not log_space:
@@ -216,7 +237,20 @@ def get_error_bars(
                 lower = N - 10**(logN - lower)
                 upper = 10**(logN + upper) - N
 
-    if kind in {'linear', 'Linear'}:
+    if kind.lower() == 'auto log':
+        val = 10**_val_PPFit_auto_log.apply(logN)
+        lower = 10**_lower_PPFit_auto_log.apply(logN)
+        upper = 10**_upper_PPFit_auto_log.apply(logN)
+        if not log_space:
+            if multiplication_form:
+                lower = 10**lower
+                upper = 10**upper
+            else:
+                lower = val - 10**(np.log10(val) - lower)
+                upper = 10**(np.log10(val) + upper) - val
+    
+    if kind.lower() == 'linear':
+        val = N
         lower = 10**_lower_PPFit_linear.apply(logN)
         upper = 10**_upper_PPFit_linear.apply(logN)
         if log_space:
@@ -225,74 +259,86 @@ def get_error_bars(
         elif multiplication_form:
             lower = N / (N - lower)
             upper = (N + upper) / N
-        
-    full_lower = np.empty(nonzero.shape, dtype=lower.dtype)
-    full_lower[nonzero] = lower
-    full_lower[~nonzero] = None
-    full_upper = np.empty(nonzero.shape, dtype=upper.dtype)
-    full_upper[nonzero] = upper
-    if log_space:
-        full_upper[~nonzero] = None
-    else:
-        full_upper[~nonzero] = N_0_upper
+    
+    if kind.lower() in {'median', 'percentile'}:
+        val = gamma.ppf(0.5, N + 1)
+        low = gamma.ppf(1 - p_1_sigma, N + 1)
+        high = gamma.ppf(p_1_sigma, N + 1)
+        lower = val - low
+        upper = high - val
+        if log_space:
+            val = np.log10(val)
+            lower = val - np.log10(low)
+            upper = np.log10(high) - val
+        elif multiplication_form:
+            lower = val / (val - lower)
+            upper = (val + upper) / val
 
+    if kind.lower() in {'mean'}:
+        val = gamma.mean(N + 1)
+        std = gamma.std(N + 1)
+        lower = std
+        upper = std
+        if log_space:
+            lower = np.log10(val) - np.log10(val - std)
+            upper = np.log10(val + std) - np.log10(val)
+            val = np.log10(val)
+        elif multiplication_form:
+            lower = val / (val - lower)
+            upper = (val + upper) / val
+
+    if kind.lower() == 'sqrt(n)':
+        val = N
+        lower = np.sqrt(N)
+        upper = np.sqrt(N)
+        if log_space:
+            lower = np.log10(N) - np.log10(N - lower)
+            upper = np.log10(N + upper) - np.log10(N)
+        elif multiplication_form:
+            lower = N / (N - lower)
+            upper = (N + upper) / N
+        
+    full_val = np.empty(nonzero.shape, dtype=np.float64)
+    full_val[nonzero] = val
+    full_val[~nonzero] = None2nan(N_0_dict[kind.lower()][0])
+    full_lower = np.empty(nonzero.shape, dtype=np.float64)
+    full_lower[nonzero] = lower
+    full_lower[~nonzero] = None2nan(N_0_dict[kind.lower()][1])
+    full_upper = np.empty(nonzero.shape, dtype=np.float64)
+    full_upper[nonzero] = upper
+    full_upper[~nonzero] = None2nan(N_0_dict[kind.lower()][2])
+    if log_space and N_0_dict[kind.lower()][0] == 0:
+        full_val[~nonzero] = None
+        full_lower[~nonzero] = None
+        full_upper[~nonzero] = None
+    elif log_space:
+        N_0_val, N_0_lower, N_0_upper = N_0_dict[kind.lower()]
+        log_lower = np.log10(N_0_val) - np.log10(N_0_val - N_0_lower)
+        log_upper = np.log10(N_0_val + N_0_upper) - np.log10(N_0_val)
+        full_val[~nonzero] = np.log10(N_0_val)
+        full_lower[~nonzero] = log_lower
+        full_upper[~nonzero] = log_upper
+    
     if full_lower.shape[0] == 1:
+        full_val = float(full_val[0])
         full_lower = float(full_lower[0])
         full_upper = float(full_upper[0])
+    
+    if return_val:
+        output = full_val, full_lower, full_upper
+    else:
+        output = full_lower, full_upper
 
-    return full_lower, full_upper
-
-
-def get_sqrt_N_error_bars(N_array):
-    lower = -1 * np.sqrt(N_array)
-    upper = np.sqrt(N_array)
-    return lower, upper
-
-
-def get_sqrt_N_error_bars_log_space(N_array, zero_point=0.00001):
-    N_low = N_array - np.sqrt(N_array)
-    N_low[N_low < zero_point] = zero_point
-    low = np.log10(N_low)
-    high = np.log10(N_array + np.sqrt(N_array))
-    max_val = np.log10(N_array)
-    lower = low - max_val
-    upper = high - max_val
-    return lower, upper
+    return output
 
 
-def true_error_median(N):
-    return gamma.ppf(0.5, N + 1)
+def poisson_skewness(N):
+    return gamma(N + 1).stats(moments='s')
 
 
-def true_error_percentile(N, p):
-    return gamma.ppf(p, N + 1)
-
-
-def get_true_error_bars_median(N_array):
-    med = true_error_median(N_array)
-    lower = med - true_error_percentile(N_array, 1 - p_1_sigma)
-    upper = true_error_percentile(N_array, p_1_sigma) - med
-    return lower, upper
-
-
-def get_true_error_bars_median_log_space(N_array):
-    med = true_error_median(N_array)
-    lower = np.log10(med) - np.log10(true_error_percentile(N_array, 1 - p_1_sigma))
-    upper = np.log10(true_error_percentile(N_array, p_1_sigma)) - np.log10(med)
-    return lower, upper
-
-
-def get_true_error_bounds(N_raw, area):
+def get_true_error_bounds(N_raw, area, kind='log'):
     N_array = np.atleast_1d(N_raw)
-    lower, upper = get_error_bars(N_array, log_space=False)
-    low_array = N_array - lower
-    high_array = N_array + upper
-    return low_array / area, high_array / area
-
-
-def get_true_error_bounds_linear(N_raw, area):
-    N_array = np.atleast_1d(N_raw)
-    lower, upper = get_error_bars(N_array, kind='linear', log_space=False)
+    lower, upper = get_error_bars(N_array, kind=kind)
     low_array = N_array - lower
     high_array = N_array + upper
     return low_array / area, high_array / area
