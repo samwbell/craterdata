@@ -106,87 +106,114 @@ def get_bin_parameters(
     return x_array, y_array
 
 
-def plot_pdf_list(ds, pdf_list, ax='None', color='black', alpha=1.0,
-                  plot_error_bars=True, plot_points=True, error_bar_type='log',
-                  area=None, ylabel_type=' Cumulative ', ms=4):
-    if ax=='None':
-        fig = plt.figure(figsize=(8,8))
-        ax = fig.add_subplot(111)
-    plt.rcParams['lines.linewidth'] = 1.0
+def format_cc_plot(
+    sorted_ds, full_density, full_low, full_high, 
+    full_ds=None, ylabel_type='Cumulative ', error_bar_type='log'
+):
+    
+    plt.xscale('log')
+    plt.yscale('log')
 
-    if error_bar_type in {'log', 'Log'}:
-        density_array = np.array([pdf.max for pdf in pdf_list])
-        lower_array = np.array([pdf.lower_max for pdf in pdf_list])
-        upper_array = np.array([pdf.upper_max for pdf in pdf_list])
-    elif error_bar_type in {'linear', 'Linear'}:
-        density_array = np.array([pdf.max for pdf in pdf_list])
-        if area is None:
-            lower_array, upper_array = tuple(np.array([
-                    pdf.error_bar_linear() for pdf in pdf_list]).T)
-        else:
-            lower_array, upper_array = tuple((np.array([
-                    (pdf * area).error_bar_linear() 
-                    for pdf in pdf_list]) / area).T)
-    elif error_bar_type in {'median', 'Median'}:
-        density_array = np.array([pdf.median for pdf in pdf_list])
-        lower_array = np.array([pdf.lower_median for pdf in pdf_list])
-        upper_array = np.array([pdf.upper_median for pdf in pdf_list])
+    plt.xticks(size=14)
+    plt.yticks(size=14)
+
+    xmax = np.max(sorted_ds)
+    if full_ds is not None:
+        xmin = np.min(full_ds)
     else:
-        raise ValueError(
-                'error_bar_type must be \'log\', \'linear\', or \'median\'')
-    
-    # For plotting purposes, make zeros functionally negative infinity in log space
-    is_zero = lower_array >= density_array
-    if lower_array[is_zero].shape[0] > 0:
-        lower_array[is_zero] = 0.99999999 * density_array[is_zero]
-    
-    if plot_points:
-        ax.loglog(ds, density_array, marker='s', ls='', mfc=color, 
-                  mec=color, mew=1.2, ms=ms)
-    if plot_error_bars:
-        data = pd.DataFrame({'D':ds, 'lower':lower_array, 
-                             'max':density_array, 'upper':upper_array})
-        yerr = np.array([data[['lower','upper']].values.T])
-        data.plot(x='D', y='max', yerr=yerr, logx=True, logy=True, ax=ax, 
-                kind='scatter', color=color, alpha=alpha, s=0, legend=True)
-    
-    plt.xticks(size=20)
-    plt.yticks(size=20)
-    
-    xmax = np.max(ds)
-    xmin = np.min(ds)
+        xmin = np.min(sorted_ds) 
     xrange = np.log10(xmax / xmin)
-    plt.xlim([xmin / (10**(0.05 * xrange)), xmax * 10**(0.05 * xrange)])
-    
-    ymax = np.nanmax(density_array + upper_array)
-    low = density_array - lower_array
-    ymin = np.nanmin(low[low > 0])
+    plt.xlim([xmin / (10**(0.05 * xrange)), xmax * 10**(0.5 * xrange)])
 
+    ymax = np.nanmax(full_high)
+    if error_bar_type.lower() == 'sqrt(n)':
+        ymin = np.nanmin(full_density) / 10
+    else:
+        ymin = np.nanmin(full_low[full_low > 0])
     yrange = np.log10(ymax / ymin)
     plt.ylim([ymin / (10**(0.05 * yrange)), ymax * 10**(0.05 * yrange)])
-    
-    plt.ylabel(ylabel_type + ' Crater Density', size=18)
-    plt.xlabel('Crater Diameter (km)', size=18)
-    
+
+    plt.ylabel(ylabel_type + rf' Crater Density (km$^{{-2}}$)', size=14)
+    plt.xlabel('Crater Diameter (km)', size=14)
+
     plt.grid(which='major', linestyle=':', linewidth=0.5, color='black')
     plt.grid(which='minor', linestyle=':', linewidth=0.25, color='gray')
+
+
+def plot_with_error(
+    ds, val, lower, upper, color='black', alpha=1.0, ms=4, 
+    plot_error_bars=True, plot_points=True, error_bar_type='log',  
+    ylabel_type='Cumulative ', elinewidth=0.5, do_formatting=None,
+    point_label=None
+):
+
+    axis_exists = any(plt.gcf().get_axes())
+    if not axis_exists:
+        fig = plt.figure(figsize=(6, 6))
+        ax = fig.add_subplot(111)
+    else:
+        ax = plt.gca()
+    fig = plt.gcf()
     
-    return ax
+    if plot_points:
+        plt.plot(
+            ds, val, marker='s', ls='', mfc=color, 
+            mec=color, mew=1.2, ms=ms, label=point_label
+        )
+    
+    if plot_error_bars:
+        plt.errorbar(
+            ds, val, yerr=[lower, upper], fmt='none', 
+            color=color, alpha=alpha, elinewidth=elinewidth
+        )
+        
+    if do_formatting is None:
+        format_bool = not axis_exists
+    else:
+        format_bool = do_formatting
+    
+    if format_bool:
+        format_cc_plot(
+            ds, val, val - lower, val + upper,
+            ylabel_type=ylabel_type, error_bar_type=error_bar_type
+        )
+        
+
+def plot_pdf_list(
+    ds, pdf_list, color='black', alpha=1.0, plot_error_bars=True, 
+    plot_points=True, error_bar_type='log', area=None, 
+    ylabel_type='Cumulative ', ms=4, elinewidth=0.5,
+    do_formatting=True
+):
+
+    for i in range(len(pdf_list)):
+        if error_bar_type.lower() != pdf_list[i].kind.lower():
+            if error_bar_type.lower() == 'sqrt(n)':
+                if area is None:
+                    raise ValueError(
+                        'If the error_bar_type is \'sqrt(N)\', and '
+                        'the pdfs are not already sqrt(N) pdfs, the '
+                        'function needs to know the area to figure '
+                        'out the N to find sqrt(N).  To fix, set '
+                        'area=<area value>.'
+                    )
+                N_pdf = pdf_list[i] * area
+                pdf_list[i] = N_pdf.as_kind('sqrt(N)') / area
+            else:
+                pdf_list[i] = pdf_list[i].as_kind(error_bar_type)
+        
+    val = np.array([pdf.val for pdf in pdf_list])
+    lower = np.array([pdf.lower for pdf in pdf_list])
+    upper = np.array([pdf.upper for pdf in pdf_list])
+
+    plot_with_error(
+        ds, val, lower, upper, color=color, alpha=alpha, ms=ms, 
+        plot_error_bars=plot_error_bars, plot_points=plot_points, 
+        error_bar_type=error_bar_type, ylabel_type=ylabel_type,
+        elinewidth=elinewidth, do_formatting=do_formatting
+    )
 
 
-def format_runtime(seconds, round_to=5):
-    days = math.floor(seconds / (60 * 60 * 24))
-    seconds_in_final_day = seconds - days * (60 * 60 * 24)
-    hours = math.floor(seconds_in_final_day / (60 * 60))
-    seconds_in_final_hour = seconds_in_final_day - hours * (60 * 60)
-    minutes = math.floor(seconds_in_final_hour / 60)
-    seconds_in_final_minute = seconds_in_final_hour - minutes * 60
-    days, hours, minutes, seconds_in_final_minute
-    return_string = str(round(seconds_in_final_minute, round_to)) + ' seconds'
-    if minutes != 0:
-        return_string =  str(minutes) + ' minutes, ' + return_string
-    if hours != 0:
-        return_string =  str(hours) + ' hours, ' + return_string
-    if days != 0:
-        return_string =  str(days) + ' days, ' + return_string
-    return return_string
+
+
+

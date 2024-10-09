@@ -1,4 +1,5 @@
-from .production_function_module import *
+from .pareto_module import *
+
 
 def N1_pdf(N, area, dmin, pf=npf_new, kind='log'):
     lambda_rv = true_error_pdf(N, kind=kind)

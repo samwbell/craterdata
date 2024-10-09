@@ -1,8 +1,4 @@
 from .reverse_fit_module import *
-
-with open('saved/ReverseFit_dict.official.pkl', 'rb') as f:
-    ReverseFit_dict = pkl.load(f)
-
     
 def calculate_cumulative_priors(
     ds : np.ndarray, area, age, d_min, D, addition_n=5000, 

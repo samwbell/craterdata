@@ -5,13 +5,21 @@ from .generic_plotting_module import *
 def fast_calc_cumulative_binned(
     ds, area, bin_width_exponent=neukum_bwe, x_axis_position='left',
     reference_point=1.0, skip_zero_crater_bins=False,
-    start_at_reference_point=False, d_max=None, return_N=False
+    start_at_reference_point=False, d_max=None, return_N=False,
+    d_min=None
 ):
+
+    if d_min is not None:
+        _reference_point = d_min
+        _start_at_reference_point = True
+    else:
+        _reference_point = reference_point
+        _start_at_reference_point = start_at_reference_point
     
     bin_counts, bin_array, bin_min, bin_max = bin_craters(
         ds, bin_width_exponent=bin_width_exponent, d_max=d_max, 
-        x_axis_position=x_axis_position, reference_point=reference_point, 
-        start_at_reference_point=start_at_reference_point
+        x_axis_position=x_axis_position, reference_point=_reference_point, 
+        start_at_reference_point=_start_at_reference_point
     )
     
     cumulative_counts = np.flip(np.flip(bin_counts).cumsum())
@@ -20,7 +28,7 @@ def fast_calc_cumulative_binned(
         ds, cumulative_counts, bin_counts, bin_array, bin_min, bin_max,
         bin_width_exponent=bin_width_exponent, 
         x_axis_position=x_axis_position, 
-        reference_point=reference_point, 
+        reference_point=_reference_point, 
         skip_zero_crater_bins=skip_zero_crater_bins
     )
         
@@ -40,13 +48,13 @@ def fast_calc_cumulative_binned(
 def calc_cumulative_binned_pdfs(
     ds, area, bin_width_exponent=neukum_bwe, x_axis_position='left',
     skip_zero_crater_bins=False, reference_point=1.0, 
-    start_at_reference_point=False, d_max=1E4
+    start_at_reference_point=False, d_max=1E4, d_min=None
 ):
     x_array, density_array = fast_calc_cumulative_binned(
         ds=ds, area=area, bin_width_exponent=bin_width_exponent, 
         x_axis_position=x_axis_position, d_max=d_max,
         skip_zero_crater_bins=skip_zero_crater_bins, 
-        reference_point=reference_point, 
+        reference_point=reference_point, d_min=d_min,
         start_at_reference_point=start_at_reference_point
     )
     cumulative_counts = density_array * area
@@ -60,19 +68,24 @@ def calc_cumulative_binned_pdfs(
 def plot_cumulative_binned(
     ds, area, bin_width_exponent=neukum_bwe, x_axis_position='left', 
     skip_zero_crater_bins=False, reference_point=1.0, d_max=1000,
-    start_at_reference_point=False, ax='None', color='black', 
-    alpha=1.0, plot_points=True, plot_error_bars=True
+    start_at_reference_point=False, color='black', 
+    alpha=1.0, plot_points=True, plot_error_bars=True,
+    do_formatting=True, d_min=None
 ):
     bin_ds, pdf_list = calc_cumulative_binned_pdfs(
         ds, area, bin_width_exponent=bin_width_exponent,
         x_axis_position=x_axis_position, d_max=d_max,
         skip_zero_crater_bins=skip_zero_crater_bins,
-        reference_point=reference_point,
+        reference_point=reference_point, d_min=d_min,
         start_at_reference_point=start_at_reference_point
     )
-    return_ax = plot_pdf_list(
-        bin_ds, pdf_list, ax=ax, color=color, alpha=alpha, 
-        plot_error_bars=plot_error_bars, plot_points=plot_points
+    modes = np.array([pdf.mode() for pdf in pdf_list])
+    bin_ds = bin_ds[modes > 1E-100]
+    pdf_list = [pdf for pdf in pdf_list if pdf.mode() > 1E-100]
+    plot_pdf_list(
+        bin_ds, pdf_list, color=color, alpha=alpha, 
+        plot_error_bars=plot_error_bars, plot_points=plot_points,
+        do_formatting=do_formatting
     )
-    return return_ax
+
 

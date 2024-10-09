@@ -51,7 +51,7 @@ def fit_log_of_normal(X_raw, P_raw):
 def plot_log_of_normal_fit(
     log_max, log_lower, log_upper, color='mediumslateblue', 
     upshift=0, linewidth=1, log_space=True, label=False,
-    slope_data=False
+    slope_data=False, legend_label=None
 ):
     X_min = log_max - 5 * log_lower
     X_max = log_max + 5 * log_upper

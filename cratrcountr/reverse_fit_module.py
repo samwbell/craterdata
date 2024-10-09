@@ -23,7 +23,7 @@ def reverse_model(observed_slope, mean_slope_factor,
         inc = (X_max - X_min) / n_X
         prob /= inc
         prob_list.append(prob)
-    log_max, log_lower, log_upper = fit_log_space_normal_piecewise(
+    log_max, log_lower, log_upper = fit_log_of_normal(
                     -1 * slope_array, np.array(prob_list))
     return log_max, log_lower, log_upper
 

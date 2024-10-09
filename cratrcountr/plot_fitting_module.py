@@ -22,8 +22,9 @@ def fit_linear(sorted_ds, density_array, uncertainties=None, guess=None):
 
 
 def fit_production_function(
-            sorted_ds, density_array, uncertainties=None, guess=None,
-            loglog_production_function=loglog_linear_pf(N1=0.001, slope=-2)):
+    sorted_ds, density_array, uncertainties=None, guess=None,
+    loglog_production_function=loglog_linear_pf(N1=0.001, slope=-2)
+):
     def fit_func(x, a):
         return a + loglog_production_function(x)
     X, Y = np.log10(sorted_ds), np.log10(density_array)

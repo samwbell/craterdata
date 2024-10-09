@@ -1,0 +1,10 @@
+﻿Name,Target material,Age,NCF N(1),D
+Cone ejecta,Unconsolidated,0.025,0.000021,0.01
+North Ray ejecta,Unconsolidated,0.053,0.000044,0.015
+Apollo 12 landing site,Solid rock,3.15,0.0036,0.7
+Luna 24 landing site,Solid rock,3.22,0.0025,0.3
+Apollo 15 landing site,Solid rock,3.29,0.0032,0.4
+Luna 16 landing site,Solid rock,3.41,0.0025,0.3
+Apollo 17 landing site,Solid rock,3.75,0.01,0.5
+Apollo 14 landing site,Unconsolidated?,3.92,0.037,1.5
+Chang’e 5 landing site,Solid rock,2.03,0.0017,0.2

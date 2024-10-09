@@ -1,15 +1,4 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-import math
-from scipy.stats.mstats import gmean
-from scipy.stats import gamma, poisson, linregress, norm
-from scipy import optimize
-from scipy.integrate import cumulative_trapezoid, trapezoid
-import pickle as pkl
-import time
-import random
+from .base_module import *
 
 class Fit:
     

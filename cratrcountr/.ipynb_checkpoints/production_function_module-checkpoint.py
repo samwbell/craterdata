@@ -48,7 +48,7 @@ npf_new_coefficients = np.array([
 
 def npf_new(D):
     return polynomial_pf(D, npf_new_coefficients)
-
+    
 
 def npf_new_dif(D):
     return polynomial_pf_dif(D, npf_new_coefficients)
@@ -60,6 +60,29 @@ def npf_new_R(D):
 
 def npf_new_loglog(logD):
     return np.log10(npf_new(10**logD))
+
+
+def npf_error(_D):
+    m0 = 0.4 / (np.log10(0.8) - np.log10(0.1))
+    m1 = 0.1 / (0 - np.log10(0.8))
+    m2 = 0.1 / np.log10(3)
+    m3 = 0.65 / (np.log10(75) - np.log10(3))
+    D = np.array(_D).astype('float')
+    return np.piecewise(
+        D,
+        [
+            D <= 0.8,
+            (D > 0.8) & (D <= 1.0),
+            (D > 1) & (D <= 3.0),
+            D > 3.0
+        ],
+        [
+            0.1 + m0 * (np.log10(0.8) - np.log10(D)),
+            m1 * (0 - np.log10(D)),
+            m2 * np.log10(D),
+            0.1 + m3 * (np.log10(D) - np.log10(3))
+        ]
+    )
 
 
 npf_mars_coefficients = np.array([

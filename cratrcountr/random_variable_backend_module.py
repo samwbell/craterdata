@@ -38,8 +38,8 @@ class CoreRandomVariable:
                 val=self.val, low=self.low, high=self.high, 
                 **self.new_kwargs()
             )
-        elif isinstance(a, int):
-            return self.P[a]
+        elif np.array(a).shape == ():
+            return np.interp(a, self.X, self.P)
         else:
             return self.__class__(
                 self.X[a],
@@ -173,7 +173,14 @@ class BaseRandomVariable(CoreRandomVariable):
         super().__init__(X, P, val=val, low=low, high=high)
         self.kind=kind
 
-        if type(kind) != str:
+        if kind is None:
+            self.val = None
+            self.low = None
+            self.high = None
+            self.lower = None
+            self.upper = None
+
+        elif type(kind) != str:
             raise ValueError(
                 'kind must be a string: \'log\', \'auto log\', '
                 '\'linear\', \'median\', \'mean\' or \'sqrt(N)\''
@@ -228,6 +235,18 @@ class BaseRandomVariable(CoreRandomVariable):
                 self.high = _high
 
         elif kind.lower() == 'mean':
+            if {None, np.nan} & {low, val, high}:
+                _low, _high = self.percentile([
+                    1 - p_1_sigma, p_1_sigma
+                ])
+            if self.val in {None, np.nan}:
+                self.val = self.mean()
+            if self.low in {None, np.nan}:
+                self.low = _low
+            if self.high in {None, np.nan}:
+                self.high = _high
+
+        elif kind.lower() == 'moments':
             if self.val is None:
                 self.val = rv_mean_XP(self.X, self.P)
             if low in {None, np.nan} or high in {None, np.nan}:
@@ -249,7 +268,8 @@ class BaseRandomVariable(CoreRandomVariable):
         else:
             raise ValueError(
                 'kind must be: \'log\', \'auto log\', '
-                '\'linear\', \'median\', \'mean\' or \'sqrt(N)\''
+                '\'linear\', \'median\', \'mean\', '
+                '\'moments\', \'sqrt(N)\', or None'
             )
 
         self.lower = self.val - self.low
@@ -263,7 +283,22 @@ class BaseRandomVariable(CoreRandomVariable):
             return self.__class__(
                 self.X, self.P, low=None, val=None, high=None, kind=kind
             )
-    
+
+    def mean(self):
+        return rv_mean_XP(self.X, self.P)
+
+    def std(self):
+        return rv_std_XP(self.X, self.P)
+
+    def skewnewss(self):
+        return rv_skewness_XP(self.X, self.P)
+
+    def max(self):
+        return self.X[np.argmax(self.P)]
+
+    def mode(self):
+        return self.X[np.argmax(self.P)]
+
 
     
 def apply2rv(rv, f, kind=None):
@@ -305,7 +340,8 @@ class MathRandomVariable(BaseRandomVariable):
         else:
             return self.__class__(
                 self.X + other, self.P, val=self.val + other,
-                low=self.low + other, high=self.high + other
+                low=self.low + other, high=self.high + other, 
+                kind=self.kind
             )
     
     def __radd__(self, other):
@@ -313,12 +349,6 @@ class MathRandomVariable(BaseRandomVariable):
             return self
         else:
             return self.__add__(other)
-        
-    def __sub__(self, other):
-        return self + (-1 * other)
-    
-    def __rsub__(self, other):
-        return (-1 * self) + other
     
     def __mul__(self, other):
         if isinstance(other, MathRandomVariable):
@@ -334,19 +364,20 @@ class MathRandomVariable(BaseRandomVariable):
             )[:, np.newaxis]
             # Because Y has even spacing, we can use np.sum
             Py = (f1(X1) * f2(Y / X1) / np.abs(X1)).sum(axis=1)
-            return self.__class__(Y.T[0], Py)
+            return self.__class__(Y.T[0], Py, kind=self.kind)
         elif other == 0:
             return 0
         elif other < 0:
             return self.__class__(
                 np.flip(self.X * other), np.flip(self.P), 
-                val=self.val * other,
-                high=self.low * other, low=self.high * other
+                val=self.val * other, high=self.low * other, 
+                low=self.high * other, kind=self.kind
             )
         else:
             return self.__class__(
                 self.X * other, self.P, val=self.val * other,
-                low=self.low * other, high=self.high * other
+                low=self.low * other, high=self.high * other, 
+                kind=self.kind
             )
     
     def __rmul__(self, other):
@@ -354,6 +385,12 @@ class MathRandomVariable(BaseRandomVariable):
             return 0
         else:
             return self.__mul__(other)
+
+    def __sub__(self, other):
+        return self + (-1 * other)
+    
+    def __rsub__(self, other):
+        return (-1 * self) + other
         
     def __truediv__(self, other):
         if isinstance(other, MathRandomVariable):
@@ -362,23 +399,25 @@ class MathRandomVariable(BaseRandomVariable):
             X1 = self.X
             X2 = other.X
             Y = np.linspace(
-                X1.min() / other.high, 
-                X1.max() / other.low, 
+                X1.min() / np.percentile(other.X, 99.99), 
+                X1.max() / np.percentile(other.X, 0.01), 
                 max(X1.shape[0], X2.shape[0]), 
                 endpoint=True
             )[:, np.newaxis]
             # Because Y has even spacing, we can use np.sum
             Py = (f1(Y * X2) * f2(X2) * np.abs(X2)).sum(axis=1)
-            return self.__class__(Y.T[0], Py)
+            return self.__class__(Y.T[0], Py, kind=self.kind)
         elif other < 0:
             return self.__class__(
                 self.X / other, self.P, val=self.val / other,
-                high=self.low / other, low=self.high / other
+                high=self.low / other, low=self.high / other, 
+                kind=self.kind
             )
         else:
             return self.__class__(
                 self.X / other, self.P, val=self.val / other,
-                low=self.low / other, high=self.high / other
+                low=self.low / other, high=self.high / other, 
+                kind=self.kind
             )
         
     def __rtruediv__(self, other):
@@ -387,12 +426,14 @@ class MathRandomVariable(BaseRandomVariable):
         elif other < 0:
             return self.__class__(
                 other / self.X, self.P, val=other / self.val,
-                high=other / self.low, low=other / self.high
+                high=other / self.low, low=other / self.high, 
+                kind=self.kind
             )
         else:
             return self.__class__(
                 other / self.X, self.P, val=other / self.val,
-                low=other / self.low, high=other / self.high
+                low=other / self.low, high=other / self.high, 
+                kind=self.kind
             )
     
     def __rpow__(self, other):
@@ -405,35 +446,42 @@ class MathRandomVariable(BaseRandomVariable):
                 'variables.'
             )
         else:
+            if self.kind == 'linear':
+                _kind = 'log'
+            else:
+                _kind = self.kind
             return self.__class__(
                 other**self.X, self.P, val=other**self.val,
-                low=other**self.low, high=other**self.high
+                low=other**self.low, high=other**self.high, 
+                kind=_kind
             )
 
     def apply(self, f, kind=None):
         return apply2rv(self, f, kind=kind)
 
-    def ten2the(self):
-        return self.apply(lambda x: 10**x)
+    def ten2the(self, kind=None):
+        return self.apply(lambda x: 10**x, kind=kind)
 
-    def scale(self, f, recalculate_bounds=False):
+    def scale(self, f, recalculate_bounds=True):
         if recalculate_bounds:
             return self.__class__(
                 f(self.X), self.P,
-                low=None, val=None, high=None
+                low=None, val=None, high=None, 
+                kind=self.kind
             )
         else:
             return self.__class__(
                 f(self.X), self.P, 
-                val=f(self.val), low=f(self.low), high=f(self.high)
+                val=f(self.val), low=f(self.low), high=f(self.high), 
+                kind=self.kind
             )
 
     def log(self, recalculate_bounds=False):
         rv_log = self[self.X > 0].scale(
             np.log10, recalculate_bounds=recalculate_bounds
         )
-        if self.kind.lower() == 'log':
-            rv_log = rv_log.as_kind('linear')
+        if self.kind.lower() in {'log', 'auto log'}:
+            rv_log.kind = 'linear'
         return rv_log
 
 

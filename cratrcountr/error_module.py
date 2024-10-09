@@ -4,19 +4,6 @@ from .fit_module import *
 p_1_sigma = 0.841345
 
 
-def get_kwargs(func):
-    defaults = func.__defaults__
-    if not defaults:
-        return {}
-
-    n_args = func.__code__.co_argcount
-    var_names = func.__code__.co_varnames
-    kwarg_names = var_names[:n_args][-len(defaults):]
-    kwargs = {kwarg_name: default for kwarg_name, 
-                   default in zip(kwarg_names, defaults)}
-    return kwargs
-
-
 def true_error_pdf_XP(
     N, n_points=10000, cum_prob_edge=1E-7, log_spacing=False
 ):
@@ -42,13 +29,7 @@ def true_error_pdf_XP(
         
     P = gamma.pdf(X, N + 1)
     
-    return X, P / P.sum()
-
-
-def is_equally_spaced(X, tolerance=1E-3):
-    spacing = np.diff(X)
-    mismatch = np.abs(spacing / spacing.mean() - 1)
-    return bool(np.sum(mismatch > tolerance) < 1)
+    return X, P
 
 
 def error_bar_log(X_raw, P_raw, max_likelihood=None):
@@ -181,6 +162,46 @@ def error_bar_linear_N(N, n_points=10000, log_spacing=False):
     return left, right
 
 
+
+def C_XP(X, P):
+    non_inf = (X > -1 * np.inf) & (X < 1 * np.inf)
+    C = P.copy()
+    C[non_inf] = cumulative_trapezoid(
+        P[non_inf], X[non_inf], initial=0
+    )
+    C[non_inf] = C[non_inf] / C[non_inf].max()
+    C[X == -1 * np.inf] = 0
+    C[X == np.inf] = 1
+    return C
+    
+
+
+def apply2rv_XP(X, P, f):
+    C = C_XP(X, P)
+    Y = f(X)
+    v = np.isfinite(Y) & ~np.isnan(Y)
+    X, Y, C = X[v], Y[v], C[v]
+    PY = np.gradient(C, Y)
+    Y_even_spacing = np.linspace(
+        Y.min(), Y.max(), Y.shape[0], endpoint=True
+    )
+    PY_even_spacing = np.interp(Y_even_spacing, Y, PY)
+    return Y_even_spacing, PY_even_spacing
+
+
+
+def error_bar_log_linear_N(N, n_points=100000, log_spacing=False):
+
+    X, P = true_error_pdf_XP(
+            N, n_points=n_points, log_spacing=log_spacing
+        )
+    Xlog, Plog = apply2rv_XP(X, P, np.log10)
+    val = Xlog[np.argmax(Plog)]
+    left, right = error_bar_linear(Xlog, Plog)
+
+    return val, left, right
+
+
 # Load the saved error bar fits from file
 _lower_PPFit = read_PPFit('saved/lower_PPFit')
 _upper_PPFit = read_PPFit('saved/upper_PPFit')
@@ -189,6 +210,9 @@ _upper_PPFit_linear = read_PPFit('saved/upper_PPFit_linear')
 _val_PPFit_auto_log = read_PPFit('saved/val_PPFit_auto_log')
 _lower_PPFit_auto_log = read_PPFit('saved/lower_PPFit_auto_log')
 _upper_PPFit_auto_log = read_PPFit('saved/upper_PPFit_auto_log')
+_val_PPFit_log_linear = read_PPFit('saved/val_PPFit_log_linear')
+_lower_PPFit_log_linear = read_PPFit('saved/lower_PPFit_log_linear')
+_upper_PPFit_log_linear = read_PPFit('saved/upper_PPFit_log_linear')
 
 N_0_dict_df = pd.read_csv('saved/N_0_dict.csv', index_col=0)
 N_0_dict = {
@@ -216,10 +240,9 @@ def get_error_bars(
     multiplication_form=False, return_val=False
 ):
 
-    if type(N_number_or_array) in {float, int}:
-        full_N = np.array([N_number_or_array])
-    else:
-        full_N = np.array(N_number_or_array)
+    full_N = np.array(N_number_or_array)
+    if full_N.shape == ():
+        full_N = full_N.reshape((1,))
     nonzero = full_N > 0
     N = full_N[nonzero]
         
@@ -241,6 +264,18 @@ def get_error_bars(
         val = 10**_val_PPFit_auto_log.apply(logN)
         lower = 10**_lower_PPFit_auto_log.apply(logN)
         upper = 10**_upper_PPFit_auto_log.apply(logN)
+        if not log_space:
+            if multiplication_form:
+                lower = 10**lower
+                upper = 10**upper
+            else:
+                lower = val - 10**(np.log10(val) - lower)
+                upper = 10**(np.log10(val) + upper) - val
+
+    if kind.lower() == 'log linear':
+        val = 10**_val_PPFit_log_linear.apply(logN)
+        lower = 10**_lower_PPFit_log_linear.apply(logN)
+        upper = 10**_upper_PPFit_log_linear.apply(logN)
         if not log_space:
             if multiplication_form:
                 lower = 10**lower
@@ -275,6 +310,20 @@ def get_error_bars(
             upper = (val + upper) / val
 
     if kind.lower() in {'mean'}:
+        val = gamma.mean(N + 1)
+        low = gamma.ppf(1 - p_1_sigma, N + 1)
+        high = gamma.ppf(p_1_sigma, N + 1)
+        lower = val - low
+        upper = high - val
+        if log_space:
+            val = np.log10(val)
+            lower = val - np.log10(low)
+            upper = np.log10(high) - val
+        elif multiplication_form:
+            lower = val / (val - lower)
+            upper = (val + upper) / val
+
+    if kind.lower() in {'moments'}:
         val = gamma.mean(N + 1)
         std = gamma.std(N + 1)
         lower = std
@@ -313,9 +362,18 @@ def get_error_bars(
         full_upper[~nonzero] = None
     elif log_space:
         N_0_val, N_0_lower, N_0_upper = N_0_dict[kind.lower()]
-        log_lower = np.log10(N_0_val) - np.log10(N_0_val - N_0_lower)
-        log_upper = np.log10(N_0_val + N_0_upper) - np.log10(N_0_val)
-        full_val[~nonzero] = np.log10(N_0_val)
+        if N_0_val is None or N_0_lower is None:
+            log_lower = np.nan
+        else:
+            log_lower = np.log10(N_0_val) - np.log10(N_0_val - N_0_lower)
+        if N_0_val is None or N_0_upper is None:
+            log_upper = np.nan
+        else:
+            log_upper = np.log10(N_0_val + N_0_upper) - np.log10(N_0_val)
+        if N_0_val is None:
+            full_val[~nonzero] = np.nan
+        else:
+            full_val[~nonzero] = np.log10(N_0_val)
         full_lower[~nonzero] = log_lower
         full_upper[~nonzero] = log_upper
     
@@ -332,7 +390,7 @@ def get_error_bars(
     return output
 
 
-def poisson_skewness(N):
+def true_error_skewness(N):
     return gamma(N + 1).stats(moments='s')
 
 
@@ -342,11 +400,5 @@ def get_true_error_bounds(N_raw, area, kind='log'):
     low_array = N_array - lower
     high_array = N_array + upper
     return low_array / area, high_array / area
-
-                                                     
-def scientific_notation(n, rounding_n=2):
-    e = math.floor(np.log10(n))
-    n_str = str(round(n / 10**e, rounding_n))
-    return n_str + f"x10$^{{{e}}}$"
 
 

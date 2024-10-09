@@ -1,57 +1,145 @@
 from .random_variable_backend_module import *
 
 
+def round_dec(dec, dn, rounding_n):
+    if np.isnan(dec):
+        dec_str = 'None'
+    else:
+        dec_str = str(round(float(dec / 10**dn), rounding_n))
+        pre_dot_len = len(dec_str.split('.')[0]) + 1
+        dec_str += '0' * (rounding_n + pre_dot_len - len(dec_str))
+    return dec_str
+    
+
 def plot_label(
-    rounding_n, low, self_max, high, mid, X, label_shift_x,
-    label_shift_y, upshift, xlim, right_position_modifier,
-    force_label_side, fig_size_adjustor, label_text_size, 
-    color, label_color, unit
+    rounding_n, low, high, val, X, P, xlim,
+    label_shift_x, label_shift_y, upshift,
+    force_label_side, label_text_size, pdf_label,
+    color, label_color, unit, pdf_label_size,
+    pdf_gap_shift, dn, label_x, label_y, mf
 ):
     ax = plt.gca()
-    f_str = "{:." + str(rounding_n) + "f}"
-    label_text = f_str.format(round(float(mid), rounding_n))
-    low_text = '-' + f_str.format(round(float(mid - low), rounding_n))
-    high_text = '+' + f_str.format(round(float(high - mid), rounding_n))
-    display_text = f"$^{{{high_text}}}$" + f"\n$_{{{low_text}}}$"
-    if xlim is None:
-        min_X = X.min()
-        max_X = X.max()
+    fig = plt.gcf()
+    v0 = 0
+    if dn is None:
+        if val == 0:
+            dn = 0
+            v0 = 1
+        elif np.isnan(val):
+            dn = 0
+        else:
+            dn = int(np.floor(np.log10(np.abs(val))))
+    if mf and (val != 0):
+        if dn == 0:
+            val_str = round_dec(val, 0, rounding_n + v0)
+            upper_str = round_dec(high / val, 0, rounding_n + v0)
+            lower_str = round_dec(val / low, 0, rounding_n + v0)
+            exp_str = ''
+        elif dn == -1:
+            val_str = round_dec(val, 0, rounding_n + 1)
+            upper_str = round_dec(high / val, 0, rounding_n + 1)
+            lower_str = round_dec(val / low, 0, rounding_n + 1)
+            exp_str = ''
+        elif dn == 1:
+            val_str = round_dec(val, 0, rounding_n - 1)
+            upper_str = round_dec(high / val, 0, rounding_n - 1)
+            lower_str = round_dec(val / low, 0, rounding_n - 1)
+            exp_str = ''
+        else:
+            val_str = round_dec(val, dn, rounding_n)
+            upper_str = round_dec(high / val, 0, rounding_n)
+            lower_str = round_dec(val / low, 0, rounding_n)
+            exp_str = rf'×10$^{{{dn}}}$'
+        upper_str = '×' + upper_str
+        lower_str = '÷' + lower_str
     else:
-        min_X = xlim[0]
-        max_X = xlim[1]
-    left_postion = min_X
-    right_postion = right_position_modifier * max_X
-    if (self_max - min_X) < (max_X - self_max):
-        text_x = right_postion
+        if dn == 0:
+            val_str = round_dec(val, 0, rounding_n + v0)
+            upper_str = round_dec(high - val, 0, rounding_n + v0)
+            lower_str = round_dec(val - low, 0, rounding_n + v0)
+            exp_str = ''
+        elif dn == -1:
+            val_str = round_dec(val, 0, rounding_n + 1)
+            upper_str = round_dec(high - val, 0, rounding_n + 1)
+            lower_str = round_dec(val - low, 0, rounding_n + 1)
+            exp_str = ''
+        elif dn == 1:
+            val_str = round_dec(val, 0, rounding_n - 1)
+            upper_str = round_dec(high - val, 0, rounding_n - 1)
+            lower_str = round_dec(val - low, 0, rounding_n - 1)
+            exp_str = ''
+        else:
+            val_str = round_dec(val, dn, rounding_n)
+            upper_str = round_dec(high - val, dn, rounding_n)
+            lower_str = round_dec(val - low, dn, rounding_n)
+            exp_str = rf'×10$^{{{dn}}}$'
+        upper_str = '+' + upper_str
+        lower_str = '-' + lower_str
+    num_str = rf'${val_str}_{{{lower_str}}}^{{{upper_str}}}$'
+    label_str = num_str + exp_str
+    if unit is not None:
+        label_str += unit
+    # if pdf_label is not None:
+    #     label_str = pdf_label + label_str
+    
+    min_X = xlim[0]
+    max_X = xlim[1]
+    peak_X = X[np.argmax(P)]
+    if force_label_side is None:
+        if (peak_X - min_X) < (max_X - peak_X):
+            label_side = 'right'
+            pdf_label_side = 'left'
+        else:
+            label_side = 'left'
+            pdf_label_side = 'right'
     else:
-        text_x = left_postion
-    if force_label_side == 'right':
-        text_x = right_postion
-    if force_label_side == 'left':
-        text_x = left_postion
+        label_side = force_label_side
+    if ax.spines[label_side].get_visible():
+        buffer = 0.007
+    else:
+        buffer = 0
+    text_x_dict = {
+        'left' : min_X + buffer * (max_X - min_X),
+        'right' : max_X - buffer * (max_X - min_X)
+    }
+    if label_x is None:
+        text_x = text_x_dict[label_side] + label_shift_x
+    else:
+        text_x = label_x
+    
     if label_color=='same':
         l_color = color
     else:
         l_color = label_color
-    fig_size = ax.figure.get_size_inches()[0] * plt.gca().get_position().width
-    fig_size_adjustment = fig_size_adjustor / fig_size
-    plt.text(text_x + label_shift_x, 0.8 + label_shift_y + upshift, 
-             label_text, ha='left', va='center',
-             size=label_text_size, color=l_color)
-    label_factor = (0.02 + 0.02 * len(label_text))
-    x_adjustment = fig_size_adjustment * label_factor * (max_X - min_X)
-    plt.text(text_x + x_adjustment + label_shift_x, 
-             0.8 + label_shift_y + upshift, display_text, 
-             ha='left', va='center', multialignment='left', 
-             size=label_text_size, color=l_color)
-    if unit is not None:
-        plt.text(
-            text_x + 2 * x_adjustment + label_shift_x, 
-            0.8 + label_shift_y + upshift, unit, 
-            ha='left', va='center', multialignment='left', 
-            size=label_text_size, color=l_color
+
+    label_text = plt.text(
+        text_x, upshift, label_str, ha=label_side, va='bottom',
+        size=label_text_size, color=l_color
+    )
+    if label_side == 'right':
+        x0 = min_X + 0.8 * (max_X - min_X)
+    else:
+        x0 = min_X + 0.2 * (max_X - min_X)
+    y0 = np.interp(x0, X, P)
+    if label_y is None:
+        text_y = y0 + 0.03 * (P.max() - upshift) + label_shift_y
+    else:
+        text_y = label_y
+    
+    if pdf_label is not None:
+        if pdf_label_size is None:
+            _pdf_label_size = label_text_size - 1
+        else:
+            _pdf_label_size = pdf_label_size
+        pdf_text = plt.text(
+            text_x, text_y, pdf_label, ha=label_side, va='bottom',
+            size=_pdf_label_size, color=l_color
         )
-    return text_x
+        text_y = y0 + 0.25 * (P.max() - upshift) + label_shift_y
+        text_y += pdf_gap_shift
+        
+    label_text.set_position((text_x, text_y))
+    fig.canvas.draw()
     
     
 def fix_start(X, P, fixed_start_x, fixed_start_p):
@@ -79,34 +167,58 @@ class RandomVariable(MathRandomVariable):
     def plot(
         self, upshift=0, color='mediumslateblue', 
         fixed_start_x=None, fixed_start_p=None, label=False, 
-        rounding_n=2, label_shift_x=0, label_shift_y=0, 
-        fig_size_adjustor=3.25, label_text_size=10, 
-        return_text_x=False, force_label_side=None, xlim=None, 
-        right_position_modifier=0.8, error_bar_type='same',
-        label_color='same', alpha=0.07, unit=None
+        rounding_n=2, label_shift_x=0, label_shift_y=0, unit=None, 
+        label_text_size=10, force_label_side=None, xlim=None, 
+        error_bar_type='same', label_color='same', alpha=0.07,
+        pdf_label=None, standardize=True, force_erase_box=None,
+        pdf_label_size=None, pdf_gap_shift=0, dn=None,
+        label_x=None, label_y=None, lw=2, mf=None
     ):
             
         axis_exists = any(plt.gcf().get_axes())
         if not axis_exists:
             fig = plt.figure(figsize=(5, 2))
             ax = fig.add_subplot(111)
+            if force_erase_box is None:
+                erase_box(ax)
+        else:
+            ax = plt.gca()
+        if force_erase_box:
             erase_box(ax)
+        fig = plt.gcf()
         
         X, P, C = self.X, self.P, self.C()
-        P = P / P.max()
+        if standardize:
+            P = P / P.max()
         if fixed_start_x is not None:
             X, P, min_X = fix_start(X, P, fixed_start_x, fixed_start_p)
         P = P + upshift
+        if X[0] > X[-1]:
+            X = np.flip(X)
+            P = np.flip(P)
         
-        plt.plot(X, P, color, linewidth=2)
-
+        plt.plot(X, P, color, linewidth=lw)
+        if xlim is not None:
+            plt.xlim(xlim)
+        xlim = ax.get_xlim()
+        
         if error_bar_type.lower() not in {'same', self.kind.lower()}:
             krv = self.as_kind(error_bar_type)
             low, val, high = krv.low, krv.val, krv.high
+            kind = error_bar_type
         else:
             low, val, high = self.low, self.val, self.high
-        interp_n = np.max([np.sum((X > low) & (X < high)), 13000])
-        X_interp = np.linspace(low, high, interp_n)
+            kind = self.kind
+        if np.isnan(low):
+            ilow = np.min(X)
+        else:
+            ilow = low
+        if np.isnan(high):
+            ihigh = np.max(X)
+        else:
+            ihigh = high
+        interp_n = np.max([np.sum((X > ilow) & (X < ihigh)), 13000])
+        X_interp = np.linspace(ilow, ihigh, interp_n)
         P_interp = np.interp(X_interp, X, P)
         
         plt.fill_between(
@@ -120,21 +232,23 @@ class RandomVariable(MathRandomVariable):
         plt.plot([low, low], [upshift, low_P], ':', color=color)
         plt.plot([high, high], [upshift, high_P], ':', color=color)
         plt.plot([val, val], [upshift, val_P], color=color)
+
+        if mf is None:
+            if kind.lower() in {'log', 'auto log'}:
+                _mf = True
+            else:
+                _mf = False
+        else:
+            _mf = mf
         
         if label:
-            text_x = plot_label(
-                rounding_n, low, self.val, high, val, X,
-                label_shift_x, label_shift_y, upshift, xlim, 
-                right_position_modifier, force_label_side,
-                fig_size_adjustor, label_text_size, color,
-                label_color, unit
+            plot_label(
+                rounding_n, low, high, val, X, P, xlim,
+                label_shift_x, label_shift_y, upshift,
+                force_label_side, label_text_size, pdf_label,
+                color, label_color, unit, pdf_label_size,
+                pdf_gap_shift, dn, label_x, label_y, _mf
             )
-
-        if xlim is not None:
-            plt.xlim(xlim)
-            
-        if return_text_x:
-            return text_x
 
 
 
@@ -157,12 +271,14 @@ def true_error_pdf_single(
             N, n_points=n_points, cum_prob_edge=cum_prob_edge
         )
         
-        lower, upper = get_error_bars(N, log_space=False, kind=kind)
-        low = N - lower
-        high = N + upper
+        val, lower, upper = get_error_bars(
+            N, log_space=False, kind=kind, return_val=True
+        )
+        low = val - lower
+        high = val + upper
 
         return_rv = RandomVariable(
-            X, P, val=N, low=low, high=high, kind=kind
+            X, P, val=val, low=low, high=high, kind=kind
         )
 
         true_error_dict[tuple([
@@ -272,9 +388,6 @@ def make_pdf_from_samples(
     X_interp = np.linspace(min_X, max_X, n_points)
     P_interp = np.interp(X_interp, X, P)
 
-    ps = [100 - 100 * p_1_sigma, 50.0, 100 * p_1_sigma]
-    low_median, median, high_median = np.percentile(sample_array, ps)
-
     if slope_data and kind=='auto log':
         log_max, log_low, log_high = fit_slope_pdf(X, P)
         high = -1 * 10**(log_max - log_low)
@@ -284,12 +397,31 @@ def make_pdf_from_samples(
             X_interp, P_interp, low=low, high=high, val=val, kind=kind
         )
     else:
-        return_rv = RandomVariable(
-            X_interp, P_interp, val=median, low=low_median, 
-            high=high_median, kind=kind
-        ).as_kind(kind)
+        return_rv = RandomVariable(X_interp, P_interp, kind=kind)
+        if kind.lower() == 'median':
+            ps = [100 - 100 * p_1_sigma, 50.0, 100 * p_1_sigma]
+            low, val, high = np.percentile(sample_array, ps)
+            return_rv = RandomVariable(
+                X_interp, P_interp, val=val, low=low, high=high,
+                kind=kind
+            )
+        else:
+            return_rv = RandomVariable(X_interp, P_interp, kind=kind)
 
     return return_rv
+
+
+def ash_pdf(data, nbins=25, nshifts=10, kind='mean'):
+    bins, heights = ash.ash1d(data, nbins, nshifts)
+    if kind == 'mean':
+        val = np.mean(data)
+        low = np.percentile(data, 100 * (1 - p_1_sigma))
+        high = np.percentile(data, 100 * p_1_sigma)
+    else:
+        val, low, high = None, None, None
+    return RandomVariable(
+        bins, heights, kind=kind, val=val, low=low, high=high
+    )
 
 
 def logspace_normal_pdf(log_max, log_lower, log_upper,
@@ -320,7 +452,60 @@ def logspace_normal_pdf(log_max, log_lower, log_upper,
 
 
 
+def _get(param, i):
+    if type(param) in {list, np.array, set}:
+        return param[i]
+    else:
+        return param
 
+def plot_pdfs(
+    rvs, color=cs, fixed_start_x=None, fixed_start_p=None, label=False, 
+    rounding_n=2, label_shift_x=0, label_shift_y=0, unit=None, 
+    label_text_size=10, force_label_side=None, xlim=None, 
+    error_bar_type='same', label_color='same', alpha=0.07,
+    pdf_label=None, standardize=True, force_erase_box=None,
+    pdf_label_size=None, pdf_gap_shift=0, dn=None
+ ):
+    for i in range(len(rvs)):
+        rvs[i].plot(
+            upshift = 1.1 * (len(rvs) - i - 1), xlim=xlim,
+            color=_get(color, i),
+            fixed_start_x=_get(fixed_start_x, i), 
+            fixed_start_p=_get(fixed_start_p, i), 
+            label=_get(label, i), 
+            rounding_n=_get(rounding_n, i), 
+            label_shift_x=_get(label_shift_x, i), 
+            label_shift_y=_get(label_shift_y, i), 
+            unit=_get(unit, i), 
+            label_text_size=_get(label_text_size, i), 
+            force_label_side=_get(force_label_side, i), 
+            error_bar_type=_get(error_bar_type, i), 
+            label_color=_get(label_color, i), 
+            alpha=_get(alpha, i),
+            pdf_label=_get(pdf_label, i), 
+            standardize=_get(standardize, i), 
+            force_erase_box=_get(force_erase_box, i), 
+            pdf_label_size=_get(pdf_label_size, i), 
+            pdf_gap_shift=_get(pdf_gap_shift, i), 
+            dn=_get(dn, i)
+        )
 
+def combine_rvs(rv_list):
+    rvs = rv_list.copy()
+    while len(rvs) > 2:
+        n = math.floor(len(rvs) / 2)
+        last_rv = rvs[-1]
+        if len(rvs) > n * 2:
+            is_odd = True
+        else:
+            is_odd = False
+        rvs = [
+            (rv_list[2 * i].update(rv_list[2 * i + 1])).normalize() 
+            for i in range(n)
+        ]
+        if is_odd:
+            rvs.append(last_rv)
+    rv = rvs[0].update(rvs[1])
+    return rv
 
 
