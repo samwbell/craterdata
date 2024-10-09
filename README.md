@@ -9,7 +9,7 @@ To see some of the functionality, start with three example notebooks:
 
 3) The plotting_examples notebook shows how to make cumulative, differential, and R plots.
 
-## instalation
+## Instalation
 First, clone the repo:
 git clone https://github.com/samwbell/cratrcountr
 
