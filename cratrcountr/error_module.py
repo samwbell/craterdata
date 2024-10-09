@@ -203,18 +203,18 @@ def error_bar_log_linear_N(N, n_points=100000, log_spacing=False):
 
 
 # Load the saved error bar fits from file
-_lower_PPFit = read_PPFit('saved/lower_PPFit')
-_upper_PPFit = read_PPFit('saved/upper_PPFit')
-_lower_PPFit_linear = read_PPFit('saved/lower_PPFit_linear')
-_upper_PPFit_linear = read_PPFit('saved/upper_PPFit_linear')
-_val_PPFit_auto_log = read_PPFit('saved/val_PPFit_auto_log')
-_lower_PPFit_auto_log = read_PPFit('saved/lower_PPFit_auto_log')
-_upper_PPFit_auto_log = read_PPFit('saved/upper_PPFit_auto_log')
-_val_PPFit_log_linear = read_PPFit('saved/val_PPFit_log_linear')
-_lower_PPFit_log_linear = read_PPFit('saved/lower_PPFit_log_linear')
-_upper_PPFit_log_linear = read_PPFit('saved/upper_PPFit_log_linear')
+_lower_PPFit = read_PPFit('files/lower_PPFit')
+_upper_PPFit = read_PPFit('files/upper_PPFit')
+_lower_PPFit_linear = read_PPFit('files/lower_PPFit_linear')
+_upper_PPFit_linear = read_PPFit('files/upper_PPFit_linear')
+_val_PPFit_auto_log = read_PPFit('files/val_PPFit_auto_log')
+_lower_PPFit_auto_log = read_PPFit('files/lower_PPFit_auto_log')
+_upper_PPFit_auto_log = read_PPFit('files/upper_PPFit_auto_log')
+_val_PPFit_log_linear = read_PPFit('files/val_PPFit_log_linear')
+_lower_PPFit_log_linear = read_PPFit('files/lower_PPFit_log_linear')
+_upper_PPFit_log_linear = read_PPFit('files/upper_PPFit_log_linear')
 
-N_0_dict_df = pd.read_csv('saved/N_0_dict.csv', index_col=0)
+N_0_dict_df = pd.read_csv('files/N_0_dict.csv', index_col=0)
 N_0_dict = {
     col: tuple(N_0_dict_df[col]) for col in N_0_dict_df
 }
