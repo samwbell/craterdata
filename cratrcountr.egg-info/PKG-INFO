@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: cratrcountr
+Version: 0.1.0
+Summary: For analyzing crater count data
+Home-page: https://github.com/samwbell/cratrcountr
+Author: Sam Bell
+Author-email: swbell11@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.12
+Requires-Dist: numpy>=1.26.4
+Requires-Dist: scipy>=1.14.0
+Requires-Dist: pandas>=2.2.2
+Requires-Dist: ash@ git+https://github.com/ajdittmann/ash.git@master#egg=ash

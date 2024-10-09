@@ -1,0 +1,7 @@
+README.md
+setup.py
+cratrcountr.egg-info/PKG-INFO
+cratrcountr.egg-info/SOURCES.txt
+cratrcountr.egg-info/dependency_links.txt
+cratrcountr.egg-info/requires.txt
+cratrcountr.egg-info/top_level.txt
