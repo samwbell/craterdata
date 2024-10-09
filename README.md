@@ -10,12 +10,21 @@ To see some of the functionality, start with three example notebooks:
 3) The plotting_examples notebook shows how to make cumulative, differential, and R plots.
 
 ## Instalation
-First, clone the repo:
+1) Clone the repo:
 `git clone https://github.com/samwbell/cratrcountr`
 
-Then navigate to its directory:
+2) Navigate to its directory:
 `cd cratrcountr`
 
-Then install:
-`pip install .`
+3) If you are using a virtual environment, enter it.  Installing cratrcountr will update to the minimum versions of numpy, scipy, and pandas.  Otherwise, it should not affect the underlying packages.
+
+4) Install:
+`pip install -e .`
+
+## Dependencies
+The cratrcountr package primarily uses the standard numpy and scipy packages.  In a few cases, it uses pandas, mostly for reading and saving CSV files.  The one nonstandard package it uses is the ash package by Alexander Dittman (github.com/ajdittmann/ash), which implements the Average Shifted Histogram (ASH) method in Python.  
+
+This method is used to produce smoothed histograms of observations that best approximate the underlying PDF as long as the distribution is roughly Gaussian.  We use it for handling synthetic modeling results.  While we are loath to rely on nonstandard packages, ash dramatically reduces the N required to see the same quality of empirical PDF in synthetic modeling--often by more than an order of magnitude.
+
+The ASH algorithm can be used on crater count diameters for estimating the PDF of diameter from an observed set of crater diameters.  However, it will produce distortions because the distribution is not roughly Gaussian.  (It is instead roughly Pareto.)  This effect will be similar to the distortions noted by Robbins et al. (2018) from the Kernel Density Estimation (KDE) method, which has mathematical similarities to ASH.
 
