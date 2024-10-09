@@ -11,11 +11,11 @@ To see some of the functionality, start with three example notebooks:
 
 ## Instalation
 First, clone the repo:
-git clone https://github.com/samwbell/cratrcountr
+`git clone https://github.com/samwbell/cratrcountr`
 
 Then navigate to its directory:
-cd cratrcountr
+`cd cratrcountr`
 
 Then install:
-pip install .
+`pip install .`
 
