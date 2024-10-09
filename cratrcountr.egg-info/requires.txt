@@ -1,4 +1,0 @@
-numpy>=1.26.4
-scipy>=1.14.0
-pandas>=2.2.2
-ash@ git+https://github.com/ajdittmann/ash.git@master#egg=ash
