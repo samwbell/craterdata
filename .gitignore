@@ -1,0 +1,17 @@
+dev/
+build/
+calc/figs/*
+!calc/figs/.gitkeep
+calc/saved/*
+!calc/saved/.gitkeep
+backups/
+craterdata.egg-info/
+__pycache__/
+examples/.ipynb_checkpoints/
+examples/.DS_Store
+src/.ipynb_checkpoints/
+src/.DS_Store
+src/craterdata.egg-info/
+src/craterdata/.ipynb_checkpoints/
+src/craterdata/.DS_Store
+src/craterdata/craterdata.egg-info/
