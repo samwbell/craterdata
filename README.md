@@ -1,4 +1,4 @@
-# cratrcountr
+# craterdata
 A Python3 package for statistical analysis of crater count data.
 
 To see some of the functionality, start with three example notebooks:
@@ -11,10 +11,10 @@ To see some of the functionality, start with three example notebooks:
 
 ## Instalation
 1) Clone the repo:
-`git clone https://github.com/samwbell/cratrcountr`
+`git clone https://github.com/samwbell/craterdata`
 
 2) Navigate to its directory:
-`cd cratrcountr`
+`cd craterdata`
 
 3) If you are using a virtual environment, enter it.  Installing cratrcountr will update to the minimum versions of numpy, scipy, and pandas.  Otherwise, it should not affect the underlying packages.
 
@@ -24,7 +24,7 @@ To see some of the functionality, start with three example notebooks:
 5) If your environment does not yet have Jupyter installed, to open the Jupyter notebooks, install Jupyter by following the directions here: https://jupyter.org/install
 
 ## Dependencies
-The cratrcountr package primarily uses the standard numpy and scipy packages.  In a few cases, it uses pandas, mostly for reading and saving CSV files.  The one nonstandard package it uses is the ash package by Alexander Dittman (github.com/ajdittmann/ash), which implements the Average Shifted Histogram (ASH) method in Python.  
+The craterdata package primarily uses the standard numpy and scipy packages.  In a few cases, it uses pandas, mostly for reading and saving CSV files.  The one nonstandard package it uses is the ash package by Alexander Dittman (github.com/ajdittmann/ash), which implements the Average Shifted Histogram (ASH) method in Python.  
 
 This method is used to produce smoothed histograms of observations that best approximate the underlying PDF as long as the distribution is roughly Gaussian.  We use it for handling synthetic modeling results.  While we are loath to rely on nonstandard packages, ASH dramatically reduces the N required to see the same quality of empirical PDF with synthetic modeling--often by more than an order of magnitude.
 

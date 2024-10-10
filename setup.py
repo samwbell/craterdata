@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="cratrcountr",
+    name="craterdata",
     version="0.1.0",
     description="For analyzing crater count data",
     author="Sam Bell",

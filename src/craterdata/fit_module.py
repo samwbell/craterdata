@@ -117,9 +117,9 @@ def save_PPFit(ppfit, file_base):
 
 
 def read_PPFit(file_base):
-    with ior.path('cratrcountr.files', file_base + '.edges.csv') as f:
+    with ior.path('craterdata.files', file_base + '.edges.csv') as f:
         edges = np.loadtxt(f, delimiter=',')
-    with ior.path('cratrcountr.files', file_base + '.params.csv') as f:
+    with ior.path('craterdata.files', file_base + '.params.csv') as f:
         param_df = pd.read_csv(f, index_col=0)
     fit_list = [
         Fit(polynomial_eq_dict[row.shape[0] - 1], row) 
