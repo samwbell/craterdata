@@ -10,7 +10,7 @@ def fast_calc_differential(
     ds, area, bin_width_exponent=neukum_bwe, reference_point=1.0, 
     skip_zero_crater_bins=False, d_max=None, d_min=None,
     start_at_reference_point=False, pf=npf_new_loglog, do_correction=True,
-    full_output=False
+    full_output=False, x_axis_position='linear_center'
 ):
 
     if d_min is not None:
@@ -22,7 +22,8 @@ def fast_calc_differential(
     
     counts, bins, bin_min, bin_max = bin_craters(
         ds, bin_width_exponent=bin_width_exponent, d_max=d_max, 
-        x_axis_position='center', reference_point=_reference_point, 
+        x_axis_position=x_axis_position, 
+        reference_point=_reference_point, 
         start_at_reference_point=_start_at_reference_point
     )
     
@@ -40,16 +41,12 @@ def fast_calc_differential(
         
     differential_counts *= cfs
     
-    diameter_array, differential_count_array = get_bin_parameters(
-        ds, differential_counts, counts, bins, bin_min, bin_max,
-        bin_width_exponent=bin_width_exponent, 
-        x_axis_position='center', 
-        reference_point=reference_point, 
-        skip_zero_crater_bins=skip_zero_crater_bins
+    diameter_array = get_bin_parameters(
+        ds, counts, bins, x_axis_position=x_axis_position
     )
     
     sorted_ds = diameter_array
-    densities = differential_count_array / area
+    densities = differential_counts / area
     
     if full_output:
         return sorted_ds, densities, counts, widths, bins, cfs
@@ -60,14 +57,15 @@ def fast_calc_differential(
 def calc_differential_pdfs(
     ds, area, bin_width_exponent=neukum_bwe, reference_point=1.0, 
     skip_zero_crater_bins=False, d_max=None, d_min=None,
-    start_at_reference_point=False, pf=npf_new_loglog, do_correction=True
+    start_at_reference_point=False, pf=npf_new_loglog, do_correction=True,
+    x_axis_position='linear_center'
 ):
     sorted_ds, rhos, counts, widths, bins, cfs = fast_calc_differential(
         ds=ds, area=area, bin_width_exponent=bin_width_exponent, 
         d_max=d_max, skip_zero_crater_bins=skip_zero_crater_bins, 
         reference_point=reference_point, pf=pf, do_correction=do_correction,
         start_at_reference_point=start_at_reference_point,
-        full_output=True, d_min=d_min
+        full_output=True, d_min=d_min, x_axis_position=x_axis_position
     )
     lambda_pdfs = true_error_pdf(counts)
     density_pdf_list = cfs / widths / area * lambda_pdfs
@@ -79,14 +77,16 @@ def plot_differential(
     skip_zero_crater_bins=False, d_max=None, d_min=None,
     start_at_reference_point=False, pf=npf_new_loglog, 
     do_correction=True, ax='None', color='black', 
-    alpha=1.0, plot_points=True, plot_error_bars=True
+    alpha=1.0, plot_points=True, plot_error_bars=True,
+    x_axis_position='linear_center'
 ):
     bin_ds, pdf_list = calc_differential_pdfs(
         ds, area, bin_width_exponent=bin_width_exponent,
         reference_point=reference_point, d_max=d_max,
         skip_zero_crater_bins=skip_zero_crater_bins,
         start_at_reference_point=start_at_reference_point,
-        pf=pf, do_correction=do_correction, d_min=d_min
+        pf=pf, do_correction=do_correction, d_min=d_min,
+        x_axis_position=x_axis_position
     )
     plot_pdf_list(
         bin_ds, pdf_list, color=color, alpha=alpha, 

@@ -73,7 +73,7 @@ def get_cu_lines(
 
 
 def plot_cumulative_unbinned(
-    ds, area, ax=None, color='black', alpha=1.0, plot_lines=True, ms=4,
+    ds, area, color='black', alpha=1.0, plot_lines=True, ms=4,
     plot_points=False, plot_point_error_bars=False, point_color='same',
     center=False, d_min=None, d_max=10000, kind='log', fill_alpha=0.07,
     do_formatting=True, elinewidth=0.5, point_label=None

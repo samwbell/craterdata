@@ -21,6 +21,8 @@ To see some of the functionality, start with three example notebooks:
 4) Install:
 `pip install -e .`
 
+5) If your environment does not yet have Jupyter installed, to open the Jupyter notebooks, install Jupyter by following the directions here: https://jupyter.org/install
+
 ## Dependencies
 The cratrcountr package primarily uses the standard numpy and scipy packages.  In a few cases, it uses pandas, mostly for reading and saving CSV files.  The one nonstandard package it uses is the ash package by Alexander Dittman (github.com/ajdittmann/ash), which implements the Average Shifted Histogram (ASH) method in Python.  
 

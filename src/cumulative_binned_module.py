@@ -4,9 +4,8 @@ from .generic_plotting_module import *
 
 def fast_calc_cumulative_binned(
     ds, area, bin_width_exponent=neukum_bwe, x_axis_position='left',
-    reference_point=1.0, skip_zero_crater_bins=False,
-    start_at_reference_point=False, d_max=None, return_N=False,
-    d_min=None
+    reference_point=1.0, skip_zero_crater_bins=False, d_min=None,
+    start_at_reference_point=False, d_max=None, return_N=False
 ):
 
     if d_min is not None:
@@ -22,18 +21,13 @@ def fast_calc_cumulative_binned(
         start_at_reference_point=_start_at_reference_point
     )
     
-    cumulative_counts = np.flip(np.flip(bin_counts).cumsum())
+    cumulative_count_array = np.flip(np.flip(bin_counts).cumsum())
     
-    diameter_array, cumulative_count_array = get_bin_parameters(
-        ds, cumulative_counts, bin_counts, bin_array, bin_min, bin_max,
-        bin_width_exponent=bin_width_exponent, 
-        x_axis_position=x_axis_position, 
-        reference_point=_reference_point, 
-        skip_zero_crater_bins=skip_zero_crater_bins
+    diameter_array = get_bin_parameters(
+        ds, bin_counts, bin_array, x_axis_position=x_axis_position
     )
         
-    if skip_zero_crater_bins and (x_axis_position != 
-                                  'Michael and Neukum (2010)'):
+    if skip_zero_crater_bins:
         diameter_array = diameter_array[bin_counts != 0]
         cumulative_count_array = cumulative_count_array[bin_counts != 0]
     

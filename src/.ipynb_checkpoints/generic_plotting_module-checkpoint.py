@@ -6,8 +6,8 @@ neukum_bwe=math.log(10, 2) / 18
 
 
 def bin_craters(
-    ds, bin_width_exponent=math.log(10,2)/18, x_axis_position='left', 
-    reference_point=1.0, start_at_reference_point=False, d_max=None
+    ds, bin_width_exponent=neukum_bwe, reference_point=1.0, 
+    start_at_reference_point=False, d_max=None
 ):
     if start_at_reference_point:
         bin_min = 0
@@ -40,70 +40,25 @@ def bin_craters(
     return bin_counts, bin_array, bin_min, bin_max
 
 
-def get_bin_parameters(
-    ds, bin_stats, bin_counts, bin_array, bin_min, bin_max,
-    bin_width_exponent=math.log(10, 2) / 18, x_axis_position='left', 
-    reference_point=1.0, skip_zero_crater_bins=False
-):
+def get_bin_parameters(ds, bin_counts, bin_array, x_axis_position='left'):
     
     if x_axis_position=='left':
-        x_array = np.array([
-            reference_point * 2.0**(bin_width_exponent * (n)) 
-            for n in list(range(bin_min, bin_max))
-        ])
+        x_array = bin_array[:-1]
         
-    elif x_axis_position=='center':
-        x_array = np.array([
-            reference_point * 2.0**(bin_width_exponent * (n + 0.5)) 
-            for n in list(range(bin_min, bin_max))
-        ])
+    elif x_axis_position=='log_center':
+        x_array = np.sqrt(bin_array[:-1] * bin_array[1:])
+
+    elif x_axis_position=='linear_center':
+        x_array = (bin_array[:-1] + bin_array[1:]) / 2
         
     elif x_axis_position=='gmean':
-        x_array = np.zeros(len(bin_counts))
-        x_array[bin_counts !=0 ] = np.array([
+        x_array = (bin_array[:-1] + bin_array[1:]) / 2
+        x_array[bin_counts != 0] = np.array([
             gmean(ds[np.digitize(ds, bin_array) == i]) 
             for i in np.array(range(1, len(bin_counts) + 1))[bin_counts != 0]
         ])
-        x_array[bin_counts == 0] = np.array([
-            reference_point * 2.0**(bin_width_exponent * (n + 0.5)) 
-            for n in np.array(list(range(bin_min, bin_max)))[bin_counts == 0]
-        ])
-        
-    elif x_axis_position == 'Michael and Neukum (2010)':
-        if not skip_zero_crater_bins:
-            raise ValueError(
-                'Michael and Neukum (2010) only used bins without zero '
-                'craters in them.  To fix, set skip_zero_crater_bins=True'
-            )
-        x_array = np.array([
-            reference_point * 2.0**(bin_width_exponent*(n+0.5)) 
-            for n in list(range(bin_min, bin_max))
-        ])
-        mn10sr = np.where((bin_counts == 0))[0]
-        if mn10sr.shape[0] > 0:
-            mn10d = mn10sr[0]
-            x_array = np.append(
-                x_array[:mn10d], 
-                np.array(ds)[np.array(ds) > bin_array[mn10d]]
-            )
             
-    else:
-        raise ValueError(
-            'x_axis_position must be one of the following: {\'left\', '
-            '\'center\', \'gmean\', \'Michael and Neukum (2010)\'}'
-        )
-    
-    if x_axis_position == 'Michael and Neukum (2010)' and mn10sr.shape[0] > 0:
-        y_array = np.append(
-            np.array(bin_stats)[:mn10d], 
-            np.flip(np.array(
-                range(len(np.array(ds)[np.array(ds) > bin_array[mn10d]]))
-            ) + 1)
-        )
-    else:
-        y_array = np.array(bin_stats)
-            
-    return x_array, y_array
+    return x_array
 
 
 def format_cc_plot(
