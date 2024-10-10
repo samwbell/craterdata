@@ -16,7 +16,7 @@ To see some of the functionality, start with three example notebooks:
 2) Navigate to its directory:
 `cd craterdata`
 
-3) If you are using a virtual environment, enter it.  Installing cratrcountr will update to the minimum versions of numpy, scipy, and pandas.  Otherwise, it should not affect the underlying packages.
+3) If you are using a virtual environment, enter it.  Installing craterdata will update to the minimum versions of numpy, scipy, and pandas.  Otherwise, it should not affect the underlying packages.
 
 4) Install:
 `pip install -e .`
