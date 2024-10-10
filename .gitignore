@@ -15,3 +15,6 @@ src/craterdata.egg-info/
 src/craterdata/.ipynb_checkpoints/
 src/craterdata/.DS_Store
 src/craterdata/craterdata.egg-info/
+.DS_Store
+.ipynb_checkpoints/
+craterdata.egg-info/
