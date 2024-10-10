@@ -7,6 +7,7 @@ setup(
     author="Sam Bell",
     author_email="swbell11@gmail.com",
     url="https://github.com/samwbell/cratrcountr",
+    package_dir={"": "src"},
     packages=find_packages(where='src'),
     install_requires=[
         "numpy>=1.26.4",
