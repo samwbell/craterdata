@@ -23,6 +23,8 @@ To see some of the functionality, start with three example notebooks:
 
 5) If your environment does not yet have Jupyter installed, to open the Jupyter notebooks, install Jupyter by following the directions here: https://jupyter.org/install
 
+6) If you want the large files for the calculations in the calc folder, download the contents of calc/figs and calc/saved from [the draft Zenodo record](https://zenodo.org/records/13917307?preview=1&token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImViNWVmYjM0LTdkZTctNDczMC1iYjY2LTlhNjYzODcxYzhkYiIsImRhdGEiOnt9LCJyYW5kb20iOiJhMWQ2YjgwNjMxM2RlOTMwOWEyZjA5ZjJlMzkzZDYwYyJ9.vr01Yxztc8haK-hcSkeJ1pzCK8ujAzZX3A_i8x2oU-mFYDygjUpsVbMWML4aepRRCxufn2sOnvf5QtxcVxUHQQ).
+
 ## Dependencies
 The craterdata package primarily uses the standard numpy and scipy packages.  In a few cases, it uses pandas, mostly for reading and saving CSV files.  The one nonstandard package it uses is the ash package by Alexander Dittman (github.com/ajdittmann/ash), which implements the Average Shifted Histogram (ASH) method in Python.  
 
