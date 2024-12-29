@@ -304,7 +304,7 @@ class BaseRandomVariable(CoreRandomVariable):
 
 
     
-def apply2rv(rv, f, kind=None):
+def apply2rv(rv, f, kind=None, even_out=True):
     X = rv.X
     PX = rv.P
     C = rv.C()
@@ -312,15 +312,21 @@ def apply2rv(rv, f, kind=None):
     v = np.isfinite(Y) & ~np.isnan(Y)
     X, Y, C = X[v], Y[v], C[v]
     PY = np.gradient(C, Y)
-    Y_even_spacing = np.linspace(
-        Y.min(), Y.max(), Y.shape[0], endpoint=True
-    )
-    PY_even_spacing = np.interp(Y_even_spacing, Y, PY)
+    if Y[0] > Y[-1]:
+        PY = -1 * PY
+        Y, PY = np.flip(Y), np.flip(PY)
     if kind is None:
         _kind = rv.kind
     else:
         _kind = kind
-    return rv.__class__(Y_even_spacing, PY_even_spacing, kind=_kind)
+    if even_out:
+        Y_even_spacing = np.linspace(
+            Y.min(), Y.max(), Y.shape[0], endpoint=True
+        )
+        PY_even_spacing = np.interp(Y_even_spacing, Y, PY)
+        return rv.__class__(Y_even_spacing, PY_even_spacing, kind=_kind)
+    else:
+        return rv.__class__(Y, PY, kind=_kind)
 
 
 
@@ -459,24 +465,24 @@ class MathRandomVariable(BaseRandomVariable):
                 kind=_kind
             )
 
-    def apply(self, f, kind=None):
+    def apply(self, f, kind=None, even_out=True):
         return apply2rv(self, f, kind=kind)
 
     def ten2the(self, kind=None):
         return self.apply(lambda x: 10**x, kind=kind)
 
     def scale(self, f, recalculate_bounds=True):
+        X, P = f(self.X), self.P
+        if X[0] > X[-1]:
+            X, P = np.flip(X), np.flip(P)
         if recalculate_bounds:
             return self.__class__(
-                f(self.X), self.P,
-                low=None, val=None, high=None, 
-                kind=self.kind
+                X, P, low=None, val=None, high=None, kind=self.kind
             )
         else:
             return self.__class__(
-                f(self.X), self.P, 
-                val=f(self.val), low=f(self.low), high=f(self.high), 
-                kind=self.kind
+                X, P, kind=self.kind,
+                val=f(self.val), low=f(self.low), high=f(self.high)
             )
 
     def log(self, recalculate_bounds=False):

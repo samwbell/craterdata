@@ -129,7 +129,7 @@ def synth_fixed_N(
 ):
     logD = np.flip(np.linspace(np.log10(dmin), np.log10(dmax), n_points))
     D = 10**logD
-    Y = 10**pf(logD)
+    Y = 10**pf(logD) - 10**pf(np.log10(dmax))
     P_cumulative = Y / Y.max()
     synth_list = [
         np.interp(np.random.random(N), P_cumulative, D)

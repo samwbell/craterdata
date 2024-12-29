@@ -39,6 +39,7 @@ def plot_log_of_normal_approximation(
         X_right = np.log10(X_right)
     plt.plot(X_right, right, color=color, linewidth=linewidth)
 
+
 def plot_linear_approximation(
     N, color='mediumslateblue', X_array=None, upshift=0, linewidth=1, 
     log_space=False, forced_right_error=None
@@ -79,7 +80,8 @@ def plot_linear_approximation(
     right = right / right.max()
     right += upshift
     plt.plot(X_right, right, color=color, linewidth=linewidth)
-    
+
+
 def plot_median_approximation(
     N, color='mediumslateblue', X_array=None, upshift=0, linewidth=1, 
     log_space=False
@@ -116,4 +118,40 @@ def plot_median_approximation(
     right += upshift
     plt.plot(X_right, right, color=color, linewidth=linewidth)
     
+
+def plot_approximation(
+    val, left_error, right_error, color='mediumslateblue',
+    X_array=None, upshift=0, linewidth=1, log_space=False
+):
     
+    if X_array is None:
+        X = true_error_pdf(val).X
+    else:
+        X = X_array
+        
+    if val > 0:
+        X_min = val - 5 * left_error
+        X_left = np.concatenate((np.linspace(X_min, X.min(), 2000), X))
+        X_left = X_left[X_left < val]
+        if log_space:
+            X_left = np.log10(X_left[X_left > 0])
+            log_left_error = np.log10(val) - np.log10(val - left_error)
+            left = norm.pdf(X_left, np.log10(val), log_left_error)
+        else:
+            left = norm.pdf(X_left, val, left_error)
+        left = left / left.max()
+        left += upshift
+
+        plt.plot(X_left, left, color=color, linewidth=linewidth)
+        
+    X_right = X[X >= val]
+    if log_space:
+        X_right = np.log10(X_right[X_right > 0])
+        log_right_error = np.log10(val + right_error) - np.log10(val)
+        right = norm.pdf(X_right, np.log10(val), log_right_error)
+    else:
+        right = norm.pdf(X_right, val, right_error)
+    right = right / right.max()
+    right += upshift
+    plt.plot(X_right, right, color=color, linewidth=linewidth)
+

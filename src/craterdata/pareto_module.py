@@ -22,10 +22,23 @@ def truncated_pareto_P(d, alpha, dmin=1, dmax=1E4):
     D = D[(D > dmin) & (D < dmax)]
     N = D.shape[0]
     beta = np.sum(np.log(D / dmin))
-    log_P = gamma.logpdf(alpha, N + 1, scale = 1 / beta)
+    log_P_full = gamma.logpdf(alpha, N + 1, scale = 1 / beta)
     log_truncator = N * np.log((1 - (dmin / dmax)**alpha))
-    P_truncated = np.e**(log_P - log_truncator)
-    return P_truncated / trapezoid(P_truncated, alpha)
+    log_P = log_P_full - log_truncator
+    log_P = log_P - log_P.max()
+    P = np.e**log_P
+    return P / trapezoid(P, alpha)
+
+def truncated_pareto_pdf(
+    ds, dmin=1.0, dmax=1E3, alpha_min=1E-5, alpha_max=10, 
+    n_points=10000, alpha=None
+):
+    if alpha is None:
+        _alpha = np.linspace(alpha_min, alpha_max, n_points)
+    else:
+        _alpha = alpha
+    P = truncated_pareto_P(ds, _alpha, dmin=dmin, dmax=dmax)
+    return RandomVariable(_alpha, P, kind='mean')
 
 def synth_flat_slope(N=100, slope=-2, dmin=1, n_datasets=None):
     if n_datasets is None:
@@ -53,7 +66,7 @@ def alpha_meshed(m, dmin=1, m_max=10, n_points=10000):
     alpha_right = m + np.logspace(-5, np.log10(m_max - m), 5000)
     left_edge = np.log10(m - 10**(np.log10(m) - np.log10(m_max - m)))
     alpha_left = np.flip(m - np.logspace(-5, left_edge, n_points - left_n))
-    alpha = np.concat([alpha_left, [m], alpha_right])
+    alpha = np.concatenate([alpha_left, [m], alpha_right])
     return alpha
 
 def mle_slope(ds, dmin):
@@ -90,17 +103,6 @@ def rise_over_run_pdf(ds, dmin=1.0, dmax=1E3):
     rise = linear_rise.apply(np.log10)
     run = np.log10(dmax) - np.log10(dmin)
     return rise / run
-
-def truncated_pareto_pdf(
-    ds, dmin=1.0, dmax=1E3, alpha_min=1E-5, alpha_max=10, 
-    n_points=10000, alpha=None
-):
-    if alpha is None:
-        _alpha = np.linspace(alpha_min, alpha_max, n_points)
-    else:
-        _alpha = alpha
-    P = truncated_pareto_P(ds, _alpha, dmin=dmin, dmax=dmax)
-    return RandomVariable(_alpha, P, kind='mean')
 
 def slope_pdf(
     ds, dmin=1.0, dmax=1E3, alpha_min=1E-5, alpha_max=10, 
